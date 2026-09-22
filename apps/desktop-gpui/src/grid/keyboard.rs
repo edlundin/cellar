@@ -10,6 +10,7 @@ enum GridKeyAction {
     Review,
     RevertAll,
     SetNull,
+    NavigateForeignKey,
     Edit,
     CancelOrRevert,
     DeleteRow,
@@ -23,6 +24,12 @@ impl DataGrid {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if self.foreign_key_picker.is_some() && event.keystroke.key == "escape" {
+            self.foreign_key_picker = None;
+            cx.notify();
+            cx.stop_propagation();
+            return;
+        }
         let modifiers = event.keystroke.modifiers;
         let Some(action) = grid_key_action(
             event.keystroke.key.as_str(),
@@ -37,6 +44,11 @@ impl DataGrid {
             GridKeyAction::Review => self.request_review(cx),
             GridKeyAction::RevertAll => self.clear_pending(cx),
             GridKeyAction::SetNull => self.set_selected_null(cx),
+            GridKeyAction::NavigateForeignKey => {
+                if let Some(position) = self.selection {
+                    self.open_foreign_key_cell(position.row, position.column, cx);
+                }
+            }
             GridKeyAction::Edit => {
                 if let Some(position) = self.selection {
                     self.begin_edit(position, window, cx);
@@ -84,6 +96,7 @@ fn grid_key_action(key: &str, secondary: bool, shift: bool) -> Option<GridKeyAct
             ("v", false) => Some(GridKeyAction::Paste),
             ("s", false) => Some(GridKeyAction::Review),
             ("z", true) => Some(GridKeyAction::RevertAll),
+            ("g", false) => Some(GridKeyAction::NavigateForeignKey),
             ("backspace", false) | ("delete", false) => Some(GridKeyAction::SetNull),
             _ => None,
         };
